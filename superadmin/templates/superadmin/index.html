@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>Manzoor Hussain</h1>
+    <form method="POST" action="{% url 'superadmin:upload-file'%}" enctype="multipart/form-data" id="upload_form">
+        {% csrf_token %}  
+        <div>
+            <input type="file" class="form-control" name="file" id="fileInput" multiple >     
+        </div>
+        <button type="submit">Upload</button>
+    </form>
+    
+</body>
+</html>
