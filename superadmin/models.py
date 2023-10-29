@@ -20,7 +20,7 @@ class Parameter(models.Model):
     max_length = models.IntegerField()
     frequency_penalty = models.FloatField()
     presence_penalty = models.FloatField()
-    top_p = models.FloatField() 
+    top_p = models.FloatField()
     model_name = models.CharField(max_length=200)
     def __str__(self):
         return self.model_name
@@ -60,10 +60,11 @@ class Userchat(models.Model):
     status = models.IntegerField(null=True, default=-1)
     def __str__(self):
         return self.user_info
-    
 
-  
- 
 
-     
+
+
+
+
+
 

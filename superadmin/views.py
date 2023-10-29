@@ -5,7 +5,7 @@ from account.models import User
 #from .serializers import UserAllProfileSerializer, PdfSerializer, ParameterSerializer, SubcriberSerializer
 from  rest_framework import status
 from rest_framework.response import Response
-from .models import Parameter, Subcriber, Countsubcriber, Countunsubcriber, Statistic, Userchat
+from .models import Parameter, Subcriber, Userchat, AppwriteFile
 from .serializers import*
 from synappgpt.module import load_data, answer
 
@@ -22,8 +22,11 @@ from appwrite.id import ID
 from appwrite.client import Client
 from appwrite.services.databases import Databases
 from appwrite.services.users import Users
-import time
+from appwrite.services.storage import Storage
+from appwrite.input_file import InputFile
+from appwrite.query import Query
 
+import time
 import socket
 import csv
 from django.http import HttpResponse
@@ -201,45 +204,31 @@ class GetDocumentView(APIView):
 
 
 class UploadFileView(APIView):
-  # renderer_classes = [UserRenderer]
-  # permission_classes = [IsAuthenticated]
-
-  # def get(self, request, format=None):
-  #   pdf_path =  os.path.join(settings.MEDIA_ROOT, 'data/*.pdf')
-  #   pdf = PDFFile.objects.all();
-  #   serializer = PdfSerializer(pdf,many=True)
-  #   return Response(serializer.data, status=status.HTTP_200_OK)
-
   def post(self, request, format=None):
+    client = Client()
+    (client
+      .set_endpoint('https://cloud.appwrite.io/v1') # Your API Endpoint
+      .set_project('64b4cb0d1b60dd5e3a99') # Your project ID
+      .set_key('6215fadd1276e8de8f57b445b583450fb76283d4984dfff4c47e0cf188cd890d0efb4feb420403e5a83f6e73f45f47724af028472a2c6c27453a2e42e1109ee7f80937d2e087460cc4617ff53a20cbf356e731fe615bcb089dcadb7dd5207691e528347b215d5e9c8d94e8fd287b0718a9bb513161510b020e35fa01ed873dbf') # Your secret API key
+    )
+    databases = Databases(client)
+    files = request.FILES.getlist('files[]')
+    serializer = PdfSerializer(data={'file': files})
 
-
-      #file = request.FILES.getlist('file')
-      pdf_path =  os.path.join(settings.MEDIA_ROOT, 'data')
-
-
-
-      # folder_path = '/path/to/folder'  # Specify the path to your folder containing the PDF files
-
-      # for filename in os.listdir(pdf_path):
-      #     if filename.endswith('.pdf'):
-      #         file_path = os.path.join(pdf_path, filename)
-      #         os.remove(file_path)
-      #         print(f"Deleted file: {file_path}")
-
-
-
-
-      file = request.FILES.getlist('files[]')
-
-
-      serializer = PdfSerializer(data={'file': file})
-
-      if serializer.is_valid():
-          serializer.save()
-          return Response({'message': 'File uploaded successfully'}, status=status.HTTP_201_CREATED)
-
+    if serializer.is_valid():
+      resp = serializer.save()
+      file_paths = [pdf_file.file.name for pdf_file in resp]
+      for f in files:
+        storage = Storage(client)
+        file_info = storage.create_file(
+            '653e3abb52adca9e3970',
+            file_id='unique()',
+            file=InputFile.from_path(os.path.join(settings.MEDIA_ROOT, file_paths[0]))
+        )
+        print(f'File uploaded to Appwrite with ID: {file_info["$id"]}')
+      return Response({'message': 'Files uploaded to Appwrite successfully'}, status=status.HTTP_201_CREATED)
+    else:
       return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class QuestionView(APIView):
     # renderer_classes = [UserRenderer]
@@ -330,14 +319,28 @@ class QuestionView(APIView):
             message_id=resultt['$id']
 
             #message_id=obj.id
-
       except:
          response_answer['result']="Some Error Occure from API"
          pass
       end_time = time.time()
 
       if response_answer['sources']:
-        return Response({'data':response_answer['result'],'sources': response_answer['sources'], 'id':message_id,'msg':'Your Answer', 'question':question}, status=status.HTTP_200_OK)
+        pdf_filenames = response_answer.get('sources', set())
+        attachments = []
+
+        storage = Storage(client)
+        for pdf_filename in pdf_filenames:
+          queries = [Query.equal('name', pdf_filename)]
+          result = storage.list_files(bucket_id='653e3abb52adca9e3970', search=pdf_filename, queries=queries)
+          attachments.append("https://cloud.appwrite.io/v1/storage/buckets/653e3abb52adca9e3970/files/"+result['files'][0]['$id']+"/view?project=64b4cb0d1b60dd5e3a99")
+
+        return Response({'data':response_answer['result'],
+                         'sources': response_answer['sources'],
+                         'id':message_id,
+                         'msg':'Your Answer',
+                         'attachments': attachments,
+                         'question':question},
+                        status=status.HTTP_200_OK)
       else:
         return Response({'data':response_answer['result'], 'id':message_id,'msg':'Your Answer',"question":question}, status=status.HTTP_200_OK)
 
