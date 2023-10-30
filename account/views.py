@@ -25,11 +25,7 @@ class UserRegistrationView(APIView):
   def post(self, request, format=None):
 
     serializer = UserRegistrationSerializer(data=request.data)
-    
-   
-    
     serializer.is_valid(raise_exception=True)
-    
     user = serializer.save()
     #token = get_tokens_for_user(user)
     return Response({'msg':'Registration Successful'}, status=status.HTTP_201_CREATED)
@@ -42,15 +38,13 @@ class UserLoginView(APIView):
     serializer.is_valid(raise_exception=True)
     email = serializer.data.get('email')
     password = serializer.data.get('password')
- 
+
     user = authenticate(email=email, password=password)
     if user is not None:
       token = get_tokens_for_user(user)
       username=user.email
       return Response({'token':token, 'msg':'Login Success', 'username':username}, status=status.HTTP_200_OK)
     else:
-     
-
       return Response({'errors':{'non_field_errors':['Connexion / signing in is not working']}}, status=status.HTTP_404_NOT_FOUND)
 
 class UserProfileView(APIView):
@@ -61,12 +55,6 @@ class UserProfileView(APIView):
     return Response(serializer.data, status=status.HTTP_200_OK)
   def put(self, request, format=None):
       user=User.objects.get(email=request.user)
-      
-     
-      
-     
-   
-     
       password = request.data['password_old']
       email = user.email
       userr = authenticate(email=email, password=password)
@@ -74,27 +62,23 @@ class UserProfileView(APIView):
         serializer = UserChangePasswordSerializer(data=request.data, context={'user':user})
         serializer.is_valid(raise_exception=True)
         serializer = UserUpdateProfileSerializer(user,data=request.data)
-      
+
         if serializer.is_valid():
-           
+
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
       else:
          return Response({'errors':{'non_field_errors':['Your old Password is not Valid']}}, status=status.HTTP_404_NOT_FOUND)
 
-     
-     
-     
-
 class UserChangePasswordView(APIView):
   renderer_classes = [UserRenderer]
   # permission_classes = [IsAuthenticated]
   def post(self, request, format=None):
-    
+
     try:
       user=User.objects.get(email=request.POST['email'])
-      if user:  
+      if user:
         serializer = UserChangePasswordSerializer(data=request.data, context={'user':user})
         serializer.is_valid(raise_exception=True)
         return Response({'msg':'Password Changed Successfully'}, status=status.HTTP_200_OK)
