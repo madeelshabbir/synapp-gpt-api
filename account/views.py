@@ -12,7 +12,6 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import User
 import pdb
 
-# Generate Token Manually
 def get_tokens_for_user(user):
   refresh = RefreshToken.for_user(user)
   return {
@@ -27,13 +26,13 @@ class UserRegistrationView(APIView):
     serializer = UserRegistrationSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     user = serializer.save()
-    #token = get_tokens_for_user(user)
     return Response({'msg':'Registration Successful'}, status=status.HTTP_201_CREATED)
 
 class UserLoginView(APIView):
   renderer_classes = [UserRenderer]
 
   def post(self, request, format=None):
+    print('Hi, in post')
     serializer = UserLoginSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     email = serializer.data.get('email')
