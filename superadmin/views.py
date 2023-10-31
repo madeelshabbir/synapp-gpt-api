@@ -1,4 +1,5 @@
 from http.client import NOT_FOUND
+import re
 from django.shortcuts import render
 from rest_framework.views import APIView
 from account.models import User
@@ -9,6 +10,7 @@ from .serializers import*
 from synappgpt.module import load_data, answer
 from .constants.app_write import *
 from .constants.endpoints import *
+from .constants.regex import *
 from django.conf import settings
 from account.renderers import UserRenderer
 from rest_framework.permissions import IsAuthenticated ,AllowAny
@@ -180,6 +182,7 @@ class QuestionView(APIView):
       parameter = Parameter.objects.filter(id=1).last()
       today = date.today()
       public_ip = ''
+      prompt_id = request.POST.get('prompt_id')
       if 'ip_address' in request.data:
          public_ip = request.POST.get('ip_address')
          if not public_ip:
@@ -216,39 +219,64 @@ class QuestionView(APIView):
         time_difference = end_time - start_time
         print("difference", time_difference)
 
+        request_obj = {
+          "question":question,
+          "answer":response_answer['result'],
+          "status":-1,
+          "created_at":str(today)
+        }
         if response_answer:
           if 'ip_address' in request.data:
-            resultt=databases.create_document(DATABASE_ID, USER_CHAT_COLLECTION_ID,ID.unique(), {"user_info":public_ip,"question":question,"answer":response_answer['result'],"status":-1,"created_at":str(today)})
-            message_id=resultt['$id']
-
+            user_info = public_ip
           elif 'username' in request.data:
-            username = request.POST.get('username')
-            resultt=databases.create_document(DATABASE_ID, USER_CHAT_COLLECTION_ID,ID.unique(), {"user_info":username,"question":question,"answer":response_answer['result'],"status":-1,"created_at":str(today)})
-            message_id=resultt['$id']
+            user_info = request.POST.get('username')
+
+          if prompt_id == '':
+            prompt = databases.create_document(DATABASE_ID, PROMPT_COLLECTION_ID,ID.unique(), {"user_info": user_info, "created_at": str(today)})
+            prompt_id = prompt['$id']
+            request_obj['prompt_id'] = prompt_id
+          else:
+            request_obj['prompt_id'] = prompt_id
+          if response_answer['sources']:
+            pdf_filenames = response_answer.get('sources', set())
+            attachments = []
+
+            storage = Storage(client)
+            for pdf_filename in pdf_filenames:
+              queries = [Query.equal('name', pdf_filename)]
+              result = storage.list_files(bucket_id=TRAINING_BUCKET_ID, search=pdf_filename, queries=queries)
+              attachments.append(ATTACHMENT_PATH+result['files'][0]['$id']+"/view?project="+PROJECT_ID)
+            request_obj["attachments"] = ', '.join(attachments)
+            request_obj["sources"] = ', '.join(pdf_filenames)
+
+          request_obj['user_info'] = user_info
+          resultt=databases.create_document(DATABASE_ID, USER_CHAT_COLLECTION_ID,ID.unique(), request_obj)
+          message_id=resultt['$id']
+          print(request_obj)
       except:
-         response_answer['result']="Some Error Occure from API"
-         pass
+          response_answer['result']="Some Error Occure from API"
+          pass
       end_time = time.time()
 
       if response_answer['sources']:
-        pdf_filenames = response_answer.get('sources', set())
-        attachments = []
-
-        storage = Storage(client)
-        for pdf_filename in pdf_filenames:
-          queries = [Query.equal('name', pdf_filename)]
-          result = storage.list_files(bucket_id='653e3abb52adca9e3970', search=pdf_filename, queries=queries)
-          attachments.append(ATTACHMENT_PATH+result['files'][0]['$id']+"/view?project="+PROJECT_ID)
-
         return Response({'data':response_answer['result'],
                          'sources': response_answer['sources'],
                          'id':message_id,
                          'msg':'Your Answer',
                          'attachments': attachments,
-                         'question':question},
+                         'question':question,
+                         'prompt_id': prompt_id},
                         status=status.HTTP_200_OK)
       else:
-        return Response({'data':response_answer['result'], 'id':message_id,'msg':'Your Answer',"question":question}, status=status.HTTP_200_OK)
+        return Response({'data':response_answer['result'], 'id':message_id,'msg':'Your Answer',"question":question, 'prompt_id': prompt_id}, status=status.HTTP_200_OK)
+
+    def put(self, request, format=None):
+      id, like = request.data.get('id'), request.data.get('status')
+      if id:
+        result = databases.update_document(DATABASE_ID, USER_CHAT_COLLECTION_ID, id, {'status': like})
+        return Response(result, status=status.HTTP_200_OK)
+      else:
+        return Response({"error","Something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
 
 class ParameterView(APIView):
     # renderer_classes = [UserRenderer]
@@ -396,7 +424,10 @@ class ChatHistory(APIView):
       today = date.today().strftime('%Y-%m-%d')
       query = request.query_params.get('query', None)
       if query:
-        queries = [Query.equal('created_at', today), Query.equal('user_info', query)]
+        queries = [Query.equal('user_info', query), Query.order_desc('prompt_id')]
+        if re.match(IP, query):
+          queries.append(Query.equal('created_at', today))
+        print(queries)
         res = databases.list_documents(DATABASE_ID, USER_CHAT_COLLECTION_ID, queries)
 
         return Response({'data': res}, status=status.HTTP_200_OK)

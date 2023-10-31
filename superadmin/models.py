@@ -52,19 +52,17 @@ class Statistic(models.Model):
     day = models.CharField(max_length=100)
     def __int__(self):
         return self.count
+
+class Prompt(models.Model):
+    user_info = models.CharField(max_length=100)
+    created_at = models.DateField()
 class Userchat(models.Model):
     user_info = models.CharField(max_length=100)
     question = models.TextField()
     answer = models.TextField()
     created_at = models.DateField()
     status = models.IntegerField(null=True, default=-1)
+    prompt_id = models.ForeignKey(Prompt, on_delete=models.CASCADE, null=True, blank=True)  # Reference to Prompt
+    sources = models.TextField(null=True)
     def __str__(self):
         return self.user_info
-
-
-
-
-
-
-
-
