@@ -1,51 +1,56 @@
 from rest_framework.views import APIView
-from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.response import Response
 from rest_framework import status
 
+from appwrite.client import Client
+from appwrite.services.databases import Databases
+from appwrite.services.account import Account
+from appwrite.exception import AppwriteException
+
+import environ
+import requests
+import json
+
+env = environ.Env()
+environ.Env.read_env()
+
 class BaseView(APIView):
-  def _current_user(self, request):
-    user = User.objects.get(email=request.user.email)
-    user_serializer = UserSerializer(user)
-    return Response(user_serializer.data)
+  def create_client(self):
+    client = Client()
+    (client
+      .set_endpoint(env('APP_WRITE_ENDPOINT'))
+      .set_project(env('PROJECT_ID'))
+      .set_key(env('PROJECT_SECRET_KEY'))
+    )
+    return client
 
   def _authenticate(self, request):
-    if not request.user.is_authenticated:
-      return unauthenticated_response()
+    # try:
+    #   session_id = request.headers['X-ACCESS-TOKEN']
+    #   client =self.create_client()
+    #   account = Account(client)
+    #   result = account.get_session(session_id)
+    #   print(result)
+    #   return -1
+    # except AppwriteException as exc:
+    #   print(exc.message)
+    session_id = request.headers['X-ACCESS-TOKEN']
+    session_url = f"{env('APP_WRITE_ENDPOINT')}/account/sessions/{session_id}"
 
-  def _developer(self, request):
-    if not request.user.role == 1:
-      return unauthorized_response()
+    response = requests.get(session_url, headers={
+        "Content-Type": "application/json",
+        "X-Appwrite-Project": '64b4cb0d1b60dd5e3a99'
+    })
 
-  def _recruiter(self, request):
-    if not request.user.role == 2:
-      return unauthorized_response()
+    body = response.json()
+    print(body)
 
-  def _authorize(self, request):
-    if not request.user.is_superuser:
-      if not request.user.is_staff:
-        return unauthorized_response()
+  def create_database(self):
+    client = self.create_client()
+    return Databases(client)
 
-  def _self_user_admin(self, request, id):
-    return self.check_exists(self._model_name, request.user.id, id)
+  def create_document(self, collection_id, document_id, body):
+    return self.databases.create_document(env('DATABASE_ID'), collection_id, document_id, body)
 
-  def user_authorize(self, model_name):
-    return Response({ model_name: 'Success' }, status=status.HTTP_200_OK)
-
-  def _find_resource(self, id):
-    try:
-      return self._model.objects.get(id=id, is_deleted=False)
-    except ObjectDoesNotExist:
-      pass
-
-  @property
-  def _model(self):
-    return eval(self._model_class_name)
-
-  @property
-  def _model_name(self):
-    return camel_to_snake(self._model_class_name)
-
-  @property
-  def _model_class_name(self):
-    return type(self).__name__.replace('View', '')
+  def list_documents(self, collection_id, queries):
+    return self.databases.get_document(env('DATABASE_ID'), collection_id, queries)
