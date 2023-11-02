@@ -26,12 +26,19 @@ from appwrite.services.users import Users
 from appwrite.services.storage import Storage
 from appwrite.input_file import InputFile
 from appwrite.query import Query
+from appwrite.exception import AppwriteException
 
 import time
 import csv
 from django.http import HttpResponse
 import os
 import requests
+import environ
+import requests
+import json
+
+env = environ.Env()
+environ.Env.read_env()
 
 client = Client()
 (client
@@ -149,26 +156,6 @@ class GetDocumentView(APIView):
     untrain_ = PDFFile.objects.filter(status=False).count()
     return Response({"train_docx":train_,"untrain_docx":untrain_},status=status.HTTP_200_OK)
 
-class UploadFileView(APIView):
-  def post(self, request, format=None):
-    files = request.FILES.getlist('files[]')
-    serializer = PdfSerializer(data={'file': files})
-
-    if serializer.is_valid():
-      resp = serializer.save()
-      file_paths = [pdf_file.file.name for pdf_file in resp]
-      for f in files:
-        storage = Storage(client)
-        file_info = storage.create_file(
-            TRAINING_BUCKET_ID,
-            file_id='unique()',
-            file=InputFile.from_path(os.path.join(settings.MEDIA_ROOT, file_paths[0]))
-        )
-        print(f'File uploaded to Appwrite with ID: {file_info["$id"]}')
-      return Response({'message': 'Files uploaded to Appwrite successfully'}, status=status.HTTP_201_CREATED)
-    else:
-      return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 class QuestionView(APIView):
     def post(self, request, format=None):
       try:
@@ -279,35 +266,41 @@ class QuestionView(APIView):
         return Response({"error","Something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
 
 class ParameterView(APIView):
-    # renderer_classes = [UserRenderer]
-    # permission_classes = [IsAuthenticated]
     def get(self, request, format=None):
-      parameter = Parameter.objects.filter(id=1)
+      try:
+        parameter = databases.get_document(DATABASE_ID, env('PARAMETER_COLLECTION_ID'), '1')
+        return Response({ "parameter": {
+            'temperature': parameter['temperature'],
+            'topP': parameter['top_p'],
+            'modelName': parameter['model_name'],
+            'presencePenalty': parameter['presence_penalty'],
+            'frequencyPenalty': parameter['frequency_penalty'],
+            'maximumLength': parameter['max_length']
+          }}, status=status.HTTP_200_OK)
+      except AppwriteException as exc:
+        return Response({ 'errors': { 'parameter': exc.message } }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
-      serializer = ParameterSerializer(parameter, many=True)
-      return Response(serializer.data, status=status.HTTP_200_OK)
     def put(self, request, format=None):
-        parameter = Parameter.objects.get(id=1)
-        serializer = ParameterSerializer(parameter, data=request.data)
-        pdf_path =  os.path.join(settings.MEDIA_ROOT, 'files_data/*.pdf')
+      print(request.data)
+      request_body = {
+        'temperature': request.data.get('temperature'),
+        'top_p': request.data.get('topP'),
+        'model_name': request.data.get('modelName'),
+        'presence_penalty': request.data.get('presencePenalty'),
+        'frequency_penalty': request.data.get('frequencyPenalty'),
+        'max_length': request.data.get('maximumLength')
+      }
 
-        path=settings.MEDIA_ROOT
-        complete_path=path.split("/media")[0]
-        save_path =  os.path.join(complete_path, 'synappgpt/model_directory')
-        if serializer.is_valid():
-            serializer.save()
-            try:
-              load_data(pdf_path,save_path)
-              pdf_file =PDFFile.objects.filter(status=False)
-              pdf_file.update(status=True)
+      print(request_body)
+      request_body = {key: value for key, value in request_body.items() if value is not None}
 
-            except:
-               return Response({"error","Error in training Model"}, status=status.HTTP_400_BAD_REQUEST)
-               pass
+      try:
+        print(request_body)
+        result = databases.update_document(DATABASE_ID, env('PARAMETER_COLLECTION_ID'), '1', request_body)
+        return Response({'parameter': result}, status=status.HTTP_200_OK)
+      except AppwriteException as exc:
+        return Response({ 'errors': { 'parameter': exc.message } }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
-
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 class SubcriberView(APIView):
     def get(self, request, format=None):
       res = databases.get_document(DATABASE_ID, PERMISSION_COLLECTION_ID, '1')
@@ -328,6 +321,7 @@ class AnnonymusUserCount(APIView):
       total_unique_unsubscribers = Userchat.objects.filter(user_info__regex=r'^[\d.]+$').values("user_info").distinct()
       total_unique_unsubscribers = total_unique_unsubscribers.count()
       return Response({'data':total_unique_unsubscribers}, status=status.HTTP_200_OK)
+
 class ChartDataView(APIView):
     # renderer_classes = [UserRenderer]
     # permission_classes = [IsAuthenticated]
