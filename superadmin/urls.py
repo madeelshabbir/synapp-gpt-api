@@ -1,11 +1,12 @@
 from django.urls import path
 from .views import *
 from .myViews.file_view import *
+from .myViews.parameter_view import *
 #import AllUserProfileView, UploadFileView, QuestionView, ParameterView, SubcriberView, SubcriberViewForUnSub
 urlpatterns = [
     path('get-all-user/', AllUserProfileView.as_view(), name='all_user'),
     path('question/', QuestionView.as_view(), name='question'),
-    path('parameter/', ParameterView.as_view(), name='parameter'),
+    path('parameter/', ParameterView.as_view(http_method_names=['get', 'put']), name='parameter'),
     path('subcriber/', SubcriberView.as_view(), name='subcriber'),
     path('anonymous-user/', AnnonymusUserCount.as_view(), name='anonymous-user'),
     path('chart-data/', ChartDataView.as_view(), name='chart-data'),

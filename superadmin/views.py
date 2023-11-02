@@ -265,42 +265,6 @@ class QuestionView(APIView):
       else:
         return Response({"error","Something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
 
-class ParameterView(APIView):
-    def get(self, request, format=None):
-      try:
-        parameter = databases.get_document(DATABASE_ID, env('PARAMETER_COLLECTION_ID'), '1')
-        return Response({ "parameter": {
-            'temperature': parameter['temperature'],
-            'topP': parameter['top_p'],
-            'modelName': parameter['model_name'],
-            'presencePenalty': parameter['presence_penalty'],
-            'frequencyPenalty': parameter['frequency_penalty'],
-            'maximumLength': parameter['max_length']
-          }}, status=status.HTTP_200_OK)
-      except AppwriteException as exc:
-        return Response({ 'errors': { 'parameter': exc.message } }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-
-    def put(self, request, format=None):
-      print(request.data)
-      request_body = {
-        'temperature': request.data.get('temperature'),
-        'top_p': request.data.get('topP'),
-        'model_name': request.data.get('modelName'),
-        'presence_penalty': request.data.get('presencePenalty'),
-        'frequency_penalty': request.data.get('frequencyPenalty'),
-        'max_length': request.data.get('maximumLength')
-      }
-
-      print(request_body)
-      request_body = {key: value for key, value in request_body.items() if value is not None}
-
-      try:
-        print(request_body)
-        result = databases.update_document(DATABASE_ID, env('PARAMETER_COLLECTION_ID'), '1', request_body)
-        return Response({'parameter': result}, status=status.HTTP_200_OK)
-      except AppwriteException as exc:
-        return Response({ 'errors': { 'parameter': exc.message } }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-
 class SubcriberView(APIView):
     def get(self, request, format=None):
       res = databases.get_document(DATABASE_ID, PERMISSION_COLLECTION_ID, '1')
