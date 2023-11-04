@@ -71,7 +71,7 @@ def answer(prompt, save_path,parameter):
             # frequency_penalty = 0,
             # presence_penalty = 0
 
-            temperature = parameter.temperture,
+            temperature = parameter.temperature,
             max_tokens = parameter.max_length,
             top_p = parameter.top_p,
             frequency_penalty = parameter.frequency_penalty,
