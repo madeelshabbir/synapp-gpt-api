@@ -1,0 +1,36 @@
+version: '3.8'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    ports:
+      - 3001:3001
+    volumes:
+      - .:/var/www/synappgpt-api
+    env_file: backend/.env
+    stdin_open: true
+    tty: true
+    links:
+      - db
+    networks:
+      - api
+  db:
+    image: postgres:14.6
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - 5433:5432
+    volumes:
+      - db:/var/lib/postgresql/data
+      - ./scripts/postgres:/docker-entrypoint-initdb.d/create_tables.sql
+    networks:
+      - api
+
+volumes:
+  db:
+    driver: local
+
+networks:
+  api:
+    driver: bridge
