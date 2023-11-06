@@ -8,8 +8,9 @@ environ.Env.read_env()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = env('SECRET_KEY')
-DEBUG = True
-ALLOWED_HOSTS = []
+DEBUG = False if env('ENVIRONMENT') == 'PRODUCTION' else True
+
+ALLOWED_HOSTS = ['*']
 INSTALLED_APPS = [
 
     "django.contrib.admin",
@@ -65,11 +66,16 @@ REST_FRAMEWORK = {
 }
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+    'default': {
+        'ENGINE': env('DB_ENGINE'),
+        'NAME': env('DB_NAME'),
+        'USER': env('DB_USER'),
+        'PASSWORD': env('DB_PASSWORD'),
+        'HOST': env('DB_HOST'),
+        'PORT': env('DB_PORT'),
     }
 }
+
 AUTH_USER_MODEL = 'account.User'
 EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = 'smtp.gmail.com'

@@ -122,9 +122,10 @@ class QuestionView(BaseView):
         if response_answer['sources']:
           pdf_filenames = response_answer.get('sources', set())
 
+          attachments = []
           for pdf_filename in pdf_filenames:
             queries = [Query.equal('name', pdf_filename)]
-            attachments = super().list_files(pdf_filename, queries)
+            attachments.append(super().list_files(pdf_filename, queries))
           request_obj["attachments"] = ', '.join(attachments)
           request_obj["sources"] = ', '.join(pdf_filenames)
 

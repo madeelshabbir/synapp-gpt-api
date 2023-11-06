@@ -39,7 +39,10 @@ class BaseView(APIView):
 
   def list_files(self, pdf_filename = '', queries = []):
     attachments = []
-    result = self.storage.list_files(bucket_id=self.env('TRAINING_BUCKET_ID'), queries=queries, search=pdf_filename)
+    if pdf_filename is not '':
+      result = self.storage.list_files(bucket_id=self.env('TRAINING_BUCKET_ID'), queries=queries, search=pdf_filename)
+    else:
+      result = self.storage.list_files(bucket_id=self.env('TRAINING_BUCKET_ID'))
     for file in result['files']:
       attachments.append(self.env('ATTACHMENT_PATH')+file['$id']+"/view?project="+ self.env('PROJECT_ID'))
     return attachments
