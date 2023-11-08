@@ -1,0 +1,53 @@
+version: '3.8'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    ports:
+      - 3001:3001
+    volumes:
+      - .:/var/www/synappgpt-api
+    env_file: backend/.env
+    stdin_open: true
+    tty: true
+    links:
+      - db
+    networks:
+      - api
+  nginx:
+    build: ./nginx
+    restart: always
+    ports:
+      - 80:80
+    volumes:
+      - static_volume:/code/staticfiles
+      - media_volume:/code/mediafiles
+      - /home/imad/gpt.synapp-messaging.com/certificate.crt:/etc/nginx/ssl/certificate.crt
+      - /home/imad/gpt.synapp-messaging.com/private.key:/etc/nginx/ssl/private.key
+      - /var/www/frontend-new/dist:/var/www/frontend-new/dist
+    depends_on:
+      - app
+    networks:
+      - api
+  db:
+    image: postgres:14.6
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - 5433:5432
+    volumes:
+      - db:/var/lib/postgresql/data
+      - ./scripts/postgres:/docker-entrypoint-initdb.d/create_tables.sql
+    networks:
+      - api
+
+volumes:
+  static_volume:
+  media_volume:
+  db:
+    driver: local
+
+networks:
+  api:
+    driver: bridge
