@@ -25,18 +25,28 @@ INSTALLED_APPS = [
     'account',
     'superadmin',
     'rest_framework_simplejwt.token_blacklist',
+    'csp',
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     'corsheaders.middleware.CorsMiddleware',
     "django.contrib.sessions.middleware.SessionMiddleware",
+    'django.middleware.cache.UpdateCacheMiddleware',
     "django.middleware.common.CommonMiddleware",
+    'django.middleware.cache.FetchFromCacheMiddleware',
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'csp.middleware.CSPMiddleware',
 ]
+
+CSP_REPORT_URI = '/csp-report-endpoint/'
+X_FRAME_OPTIONS = 'DENY'
+SECURE_HSTS_SECONDS = 40000000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
 
 ROOT_URLCONF = "backend.urls"
 

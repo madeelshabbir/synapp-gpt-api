@@ -2,6 +2,7 @@
 from PyPDF2 import PdfReader
 import os
 import glob
+import environ
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
@@ -9,8 +10,11 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import VectorDBQA
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings.openai import OpenAIEmbeddings
-from .key import OPENAI_API_KEY
-os.environ["OPENAI_API_KEY"] = "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"
+
+env = environ.Env()
+environ.Env.read_env()
+
+OPENAI_API_KEY = env('OPENAI_API_KEY')
 embeddings = OpenAIEmbeddings()
 
 
