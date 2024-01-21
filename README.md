@@ -50,7 +50,7 @@ Copy `.env.example` to `.env`
 
 - Run DB container
 
-      docker-compose -f docker-compose.dev.yml up --build db
+      docker-compose up --build db
 
 - Open psql console
 
@@ -71,7 +71,7 @@ Copy `.env.example` to `.env`
 
 ### 4. Run the server
 
-      docker-compose -f docker-compose.yml up --build
+      docker-compose up --build
 
 ### 5. Create superuser and seed dummy data
 
