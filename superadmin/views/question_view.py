@@ -16,6 +16,20 @@ from superadmin.constants.endpoints import *
 from superadmin.constants.regex import *
 from superadmin.wrappers.dot_notation_object import *
 
+def flatten_array(arr):
+    result = []
+    stack = [arr]
+
+    while stack:
+        current = stack.pop()
+        for item in current:
+            if isinstance(item, list):
+                stack.append(item)
+            else:
+                result.append(item)
+
+    return result
+
 class QuestionView(BaseView):
   def _get_public_ip(self):
     try:
@@ -126,7 +140,7 @@ class QuestionView(BaseView):
           for pdf_filename in pdf_filenames:
             queries = [Query.equal('name', pdf_filename)]
             attachments.append(super().list_files(pdf_filename, queries))
-          request_obj["attachments"] = ', '.join(attachments)
+          request_obj["attachments"] = ', '.join(flatten_array(attachments))
           request_obj["sources"] = ', '.join(pdf_filenames)
 
         request_obj['user_info'] = user_info
