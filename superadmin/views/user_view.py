@@ -29,7 +29,7 @@ class UserView(BaseView):
     users = Users(client)
     result = users.list(queries=[Query.limit(100)])
     user_data = result.get('users', [])
-    headers = ['Username', 'Email', 'Occupation', 'Specialty']
+    headers = ['#No', 'Username', 'Email', 'Occupation', 'Specialty']
     data = [
         [
             user['name'],

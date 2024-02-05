@@ -28,7 +28,7 @@
 
 Clone the project repository
 
-      $ git clone https://<TOKEN>@github.com/Alishba-Saeed/synapp-gpt-api.git
+      $ git clone https://<TOKEN>@github.com/SynappGpt/synapp-gpt-api.git
 
 Get into the project directory
 
